@@ -25,6 +25,7 @@ def commandImportThund(fname):
             if email in emailStore:
                 continue
             print("CREATE %s" % email)
+            #FIXME : benice
             p = s.people().createContact(body={'emailAddresses':[{'value' : email}]}).execute()
             p = match_void(p, s)
 

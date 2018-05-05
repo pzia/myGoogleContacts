@@ -51,13 +51,26 @@ def get_google_service_api():
     people_service = build(serviceName='people', version='v1', http=http)
     return(people_service)
 
+def beNice(obj):
+    """Be nice : exponential backoff when over quota"""
+    wait = 1
+    while wait :
+        try :
+            return_value = obj.execute()
+            wait = 0
+        except : #FIXME : we should test the type of the exception
+            print("EXCEPT : Wait for %d seconds" % wait)
+            time.sleep(wait)
+            wait *= 2
+    return(return_value)
+
 def iterConnexions(*func):
     """basic iteration through list of connections with the *func functions
     func take a person and a people service as args, and return a person
     """
     
     people_service = get_google_service_api() #FIXME : test
-    connections = people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses').execute()
+    connections = beNice(people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses'))
     #Fixme : test ?
 
     counter = 0
@@ -69,16 +82,7 @@ def iterConnexions(*func):
                 p = f(p, people_service)
         if 'nextPageToken' in connections : #there is more
             print("==Counter==%d, go to Next Page" % counter)
-            #Be nice : exponential backoff when over quota
-            wait = 1
-            while wait :
-                try :
-                    connections = people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses', pageToken=connections['nextPageToken']).execute()
-                    wait = 0
-                except : #FIXME : we should test the type of the exception
-                    print("EXCEPT : Wait for %d seconds" % wait)
-                    time.sleep(wait)
-                    wait *= 2
+            connections = beNice(people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses', pageToken=connections['nextPageToken'])) 
         else : 
             break
 
