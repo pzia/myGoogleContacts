@@ -4,6 +4,9 @@
 #import conf (dirty but simple)
 import myconf
 
+#for quota - exponential backoff
+import time
+
 #copy from python google client tutorial
 import httplib2
 from apiclient.discovery import build
@@ -66,7 +69,16 @@ def iterConnexions(*func):
                 p = f(p, people_service)
         if 'nextPageToken' in connections : #there is more
             print("==Counter==%d, go to Next Page" % counter)
-            connections = people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses', pageToken=connections['nextPageToken']).execute()
+            #Be nice : exponential backoff when over quota
+            wait = 1
+            while wait :
+                try :
+                    connections = people_service.people().connections().list(resourceName='people/me', personFields='names,emailAddresses', pageToken=connections['nextPageToken']).execute()
+                    wait = 0
+                except : #FIXME : we should test the type of the exception
+                    print("EXCEPT : Wait for %d seconds" % wait)
+                    time.sleep(wait)
+                    wait *= 2
         else : 
             break
 
